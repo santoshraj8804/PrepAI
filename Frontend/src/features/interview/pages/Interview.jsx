@@ -74,6 +74,8 @@ const Interview = () => {
         )
     }
 
+    console.log(report)
+
     const scoreColor =
         report.matchScore >= 80 ? 'score--high' :
             report.matchScore >= 60 ? 'score--mid' : 'score--low'
@@ -83,7 +85,7 @@ const Interview = () => {
         <div className='interview-page'>
             <div className='interview-layout'>
 
-                
+                {/* ── Left Nav ── */}
                 <nav className='interview-nav'>
                     <div className="nav-content">
                         <p className='interview-nav__label'>Sections</p>
@@ -108,6 +110,7 @@ const Interview = () => {
 
                 <div className='interview-divider' />
 
+                {/* ── Center Content ── */}
                 <main className='interview-content'>
                     {activeNav === 'technical' && (
                         <section>
@@ -154,10 +157,10 @@ const Interview = () => {
 
                 <div className='interview-divider' />
 
-                
+                {/* ── Right Sidebar ── */}
                 <aside className='interview-sidebar'>
 
-                    
+                    {/* Match Score */}
                     <div className='match-score'>
                         <p className='match-score__label'>Match Score</p>
                         <div className={`match-score__ring ${scoreColor}`}>
@@ -169,7 +172,7 @@ const Interview = () => {
 
                     <div className='sidebar-divider' />
 
-                    
+                    {/* Skill Gaps */}
                     <div className='skill-gaps'>
                         <p className='skill-gaps__label'>Skill Gaps</p>
                         <div className='skill-gaps__list'>
