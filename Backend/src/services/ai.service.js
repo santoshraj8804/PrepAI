@@ -1,14 +1,14 @@
-const { GoogleGenAI } = require("@google/genai");
+const { Groq } = require("groq-sdk");
 const { z } = require("zod");
 const {zodToJsonSchema} = require("zod-to-json-schema")
 const puppeteer = require("puppeteer")
 
-const ai = new GoogleGenAI({
-    apiKey: process.env.GOOGLE_GENAI_API_KEY
+const ai = new Groq({
+    apiKey: process.env.GROQ_API_KEY
 });
 
 const interviewReportSchema = z.object({
-    matchScore: z.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
+    matchScore: z.coerce.number().describe("A score between 0 and 100 indicating how well the candidate's profile matches the job describe"),
     technicalQuestions: z.array(z.object({
         question: z.string().describe("The technical question can be asked in the interview"),
         intention: z.string().describe("The intention of interviewer behind asking this question"),
@@ -28,29 +28,90 @@ const interviewReportSchema = z.object({
         focus: z.string().describe("The main focus of this day in the preparation plan, e.g. data structures, system design, mock interviews etc."),
         tasks: z.array(z.string()).describe("List of tasks to be done on this day to follow the preparation plan, e.g. read a specific book or article, solve a set of problems, watch a video etc.")
     })).describe("A day-wise preparation plan for the candidate to follow in order to prepare for the interview effectively"),
-    title: z.string().describe("The title of the job for which the interview report is generated"),
+    title: z.string().describe("The title of the job for which the interview report is generated").default("Interview Report"),
 })
 
 async function generateInterviewReport({ resume, selfDescription, jobDescription }) {
 
+    const jsonSchema = JSON.stringify(zodToJsonSchema(interviewReportSchema), null, 2);
 
-    const prompt = `Generate an interview report for a candidate with the following details:
-                        Resume: ${resume}
-                        Self Description: ${selfDescription}
-                        Job Description: ${jobDescription}
-`
+//     const prompt = `Generate an interview report for a candidate with the following details:
+//                         Resume: ${resume}
+//                         Self Description: ${selfDescription}
+//                         Job Description: ${jobDescription}
+//                         Include the following details along with the report:
+//                         1. matchScore: A score between 0 and 100 indicating how well the candidate's profile matches the job describe
+//                         2. technicalQuestions: Technical questions that can be asked in the interview along with their intention and how to answer them
+//                         3. behavioralQuestions: Behavioral questions that can be asked in the interview along with their intention and how to answer them
+//                         4. skillGaps: List of skill gaps in the candidate's profile along with their severity
+//                         5. preparationPlan: A day-wise preparation plan for the candidate to follow in order to prepare for the interview effectively
+// `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(interviewReportSchema),
-        }
+    const response = await ai.chat.completions.create({
+        messages: [
+            {
+                role: "system",
+                content: `You are a recruitment expert.
+
+                            Return ONLY valid JSON like this example:
+
+                            {
+                            "matchScore": 85,
+                            "technicalQuestions":[
+                            {
+                            "question":"Explain REST API",
+                            "intention":"Check backend knowledge",
+                            "answer":"Explain REST principles..."
+                            }
+                            ],
+                            "behavioralQuestions":[
+                            {
+                            "question":"Tell me about a challenge",
+                            "intention":"Check problem solving",
+                            "answer":"Use STAR method"
+                            }
+                            ],
+                            "skillGaps":[
+                            {
+                            "skill":"System Design",
+                            "severity":"high"
+                            }
+                            ],
+                            "preparationPlan":[
+                            {
+                            "day":1,
+                            "focus":"Data Structures",
+                            "tasks":["Solve 5 Leetcode problems"]
+                            }
+                            ],
+                            "title":"Interview Report"
+                            }
+
+                            Return ONLY JSON. No text.`
+            },
+            {
+                role: "user",
+                content: `Generate the report based on these details:
+                Resume: ${resume}
+                Self Description: ${selfDescription}
+                Job Description: ${jobDescription}`
+            }
+        ],
+        model: "llama-3.3-70b-versatile",
+        temperature: 0.5,
+        response_format: { type: "json_object" }
+        // config: {
+        //     responseMimeType: "application/json",
+        //     responseSchema: zodToJsonSchema(interviewReportSchema),
+        // }
     })
+    const text = response.choices[0].message.content;
+    const start = text.indexOf("{")
+    const end = text.lastIndexOf("}") + 1
+    const json = JSON.parse(text.slice(start, end))
 
-    return JSON.parse(response.text)
-
+    const res = interviewReportSchema.parse(json)
+        return res;
 
 }
 
@@ -92,17 +153,69 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                         The resume should not be so lengthy, it should ideally be 1-2 pages long when converted to PDF. Focus on quality rather than quantity and make sure to include all the relevant information that can increase the candidate's chances of getting an interview call for the given job description.
                     `
 
-    const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-            responseMimeType: "application/json",
-            responseSchema: zodToJsonSchema(resumePdfSchema),
-        }
+    const response = await ai.chat.completions.create({
+        model: "llama-3.3-70b-versatile",
+        messages: [
+            {
+                role: "system",
+                content: `You are a recruitment expert.
+
+                        Return ONLY valid JSON like this example:
+
+                        {
+                        "matchScore": 85,
+                        "technicalQuestions":[
+                        {
+                        "question":"Explain REST API",
+                        "intention":"Check backend knowledge",
+                        "answer":"Explain REST principles..."
+                        }
+                        ],
+                        "behavioralQuestions":[
+                        {
+                        "question":"Tell me about a challenge",
+                        "intention":"Check problem solving",
+                        "answer":"Use STAR method"
+                        }
+                        ],
+                        "skillGaps":[
+                        {
+                        "skill":"System Design",
+                        "severity":"high"
+                        }
+                        ],
+                        "preparationPlan":[
+                        {
+                        "day":1,
+                        "focus":"Data Structures",
+                        "tasks":["Solve 5 Leetcode problems"]
+                        }
+                        ],
+                        "title":"Interview Report"
+                        }
+
+                        Return ONLY JSON. No text.`
+            },
+            {
+                role: "user",
+                content: prompt
+            }
+        ],
+        temperature: 0.5,
+        response_format: { type: "json_object" }
+        // config: {
+        //     responseMimeType: "application/json",
+        //     responseSchema: zodToJsonSchema(resumePdfSchema),
+        // }
     })
+    const text = response.choices[0].message.content
 
+    // safer JSON extraction
+    const start = text.indexOf("{")
+    const end = text.lastIndexOf("}") + 1
+    const json = JSON.parse(text.slice(start, end))
 
-    const jsonContent = JSON.parse(response.text)
+    const jsonContent = resumePdfSchema.parse(json)
 
     const pdfBuffer = await generatePdfFromHtml(jsonContent.html)
 
