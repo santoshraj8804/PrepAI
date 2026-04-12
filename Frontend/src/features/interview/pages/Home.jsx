@@ -3,12 +3,15 @@ import "../style/home.scss"
 import { useInterview } from '../hooks/useInterview.js'
 import { useNavigate } from 'react-router'
 
+//----------------------------
+
 const Home = () => {
 
     const { loading, generateReport,reports } = useInterview()
     const [ jobDescription, setJobDescription ] = useState("")
     const [ selfDescription, setSelfDescription ] = useState("")
     const resumeInputRef = useRef()
+    const [uploadedFile, setUploadedFile] = useState(null)
 
     const navigate = useNavigate()
 
@@ -16,6 +19,26 @@ const Home = () => {
         const resumeFile = resumeInputRef.current.files[ 0 ]
         const data = await generateReport({ jobDescription, selfDescription, resumeFile })
         navigate(`/interview/${data._id}`)
+    }
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0]
+        if (file) {
+            setUploadedFile(file.name)
+        }
+    }
+
+    const handleDrop = (e) => {
+        e.preventDefault()
+        const file = e.dataTransfer.files[0]
+        if (file) {
+            resumeInputRef.current.files = e.dataTransfer.files
+            setUploadedFile(file.name)
+        }
+    }
+
+    const handleDragOver = (e) => {
+        e.preventDefault()
     }
 
     if (loading) {
@@ -75,13 +98,35 @@ const Home = () => {
                                 Upload Resume
                                 <span className='badge badge--best'>Best Results</span>
                             </label>
-                            <label className='dropzone' htmlFor='resume'>
+                            <label
+                                className='dropzone'
+                                htmlFor='resume'
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                            >
                                 <span className='dropzone__icon'>
                                     <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>
                                 </span>
-                                <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
-                                <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
-                                <input ref={resumeInputRef} hidden type='file' id='resume' name='resume' accept='.pdf,.docx' />
+                                {uploadedFile ? (
+                                    <>
+                                        <p className='dropzone__title'>Uploaded ✅</p>
+                                        <p className='dropzone__subtitle'>{uploadedFile}</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p className='dropzone__title'>Click to upload or drag &amp; drop</p>
+                                        <p className='dropzone__subtitle'>PDF or DOCX (Max 5MB)</p>
+                                    </>
+                                )}
+                                <input
+                                    ref={resumeInputRef}
+                                    hidden
+                                    type='file'
+                                    id='resume'
+                                    name='resume'
+                                    accept='.pdf,.docx'
+                                    onChange={handleFileChange}
+                                />
                             </label>
                         </div>
 
