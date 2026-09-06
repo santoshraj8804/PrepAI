@@ -3,6 +3,7 @@ const { generateInterviewReport, generateResumePdf } = require("../services/ai.s
 const interviewReportModel = require("../models/interviewReport.model")
 
 
+
 /**
  * @description Controller to generate interview report based on user self description, resume and job description.
  */

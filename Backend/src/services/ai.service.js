@@ -97,7 +97,7 @@ async function generateInterviewReport({ resume, selfDescription, jobDescription
                 Job Description: ${jobDescription}`
             }
         ],
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         temperature: 0.5,
         response_format: { type: "json_object" }
         // config: {
@@ -154,7 +154,7 @@ async function generateResumePdf({ resume, selfDescription, jobDescription }) {
                     `
 
     const response = await ai.chat.completions.create({
-        model: "llama-3.3-70b-versatile",
+        model: "openai/gpt-oss-120b",
         messages: [
             {
                 role: "system",
